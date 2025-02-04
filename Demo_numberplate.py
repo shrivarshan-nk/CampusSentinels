@@ -7,7 +7,7 @@ import easyocr
 import numpy as np
 
 # Load the trained YOLOv8 model
-model = YOLO("runs/detect/train3/weights/best.pt")
+model = YOLO("best.pt")
 
 # Initialize the EasyOCR reader
 ocr_reader = easyocr.Reader(['en'])
