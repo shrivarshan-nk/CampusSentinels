@@ -1,0 +1,100 @@
+import tkinter as tk
+from tkinter import filedialog
+from ultralytics import YOLO
+import cv2
+from PIL import Image, ImageTk
+
+# Load the trained YOLOv8 model
+model = YOLO("runs/detect/train14/weights/best.pt")
+
+# Function to select a file (single image)
+def select_file():
+    file_path = filedialog.askopenfilename(
+        filetypes=[("Image Files", "*.jpg;*.jpeg;*.png")]
+    )
+    if file_path:
+        image_path.set(file_path)
+        run_yolo(image_path.get())  # Run YOLO on selected image
+
+# Function to run YOLO on an image and display the result
+def run_yolo(image_path_value):
+    if not image_path_value:
+        print("No image selected")
+        return
+    
+    print(f"Running inference on {image_path_value}...")
+
+    # Run YOLO model prediction on the selected image
+    results = model.predict(source=image_path_value, conf=0.9)
+
+    # Annotate the image with bounding boxes and labels
+    annotated_image = results[0].plot()  # Plot the detection results on the image
+
+    # Convert the annotated image from BGR (OpenCV) to RGB (PIL)
+    annotated_image_rgb = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+
+    # Show the image in the Tkinter window
+    show_image(annotated_image_rgb)
+
+# Function to display an image in the Tkinter window
+def show_image(image_array):
+    try:
+        img = Image.fromarray(image_array)
+        img = img.resize((500, 400))  # Resize for display
+
+        img_tk = ImageTk.PhotoImage(img)
+        panel.config(image=img_tk)
+        panel.image = img_tk  # Prevent garbage collection
+    except Exception as e:
+        print(f"Error displaying image: {e}")
+
+# Function to open the webcam and run YOLO in real-time
+def open_camera():
+    cap = cv2.VideoCapture(0)  # Open the default camera (index 0)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Run YOLO inference on the frame
+        results = model.predict(source=frame, conf=0.3)
+        
+        # Annotate the frame
+        annotated_frame = results[0].plot()
+
+        # Convert frame to RGB format for Tkinter display
+        frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
+        img = img.resize((500, 400))
+
+        img_tk = ImageTk.PhotoImage(img)
+        panel.config(image=img_tk)
+        panel.image = img_tk
+
+        root.update_idletasks()
+        root.update()
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Create GUI window
+root = tk.Tk()
+root.title("YOLOv8 Image & Camera Detection")
+
+image_path = tk.StringVar()
+
+# Button to select an image
+btn_select = tk.Button(root, text="Select Image", command=select_file, font=("Arial", 14))
+btn_select.pack(pady=10)
+
+# Button to open camera
+btn_camera = tk.Button(root, text="Start Camera", command=open_camera, font=("Arial", 14))
+btn_camera.pack(pady=10)
+
+# Label to display images
+panel = tk.Label(root)
+panel.pack()
+
+# Run Tkinter event loop
+root.mainloop()
